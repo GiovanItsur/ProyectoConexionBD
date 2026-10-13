@@ -217,7 +217,11 @@ class EmpleadosCRUD:
     def validar_login(self, usuario, contrasenia):
         """
         #esta funcion va a ayudarte Gio a que en la de login puedas verificar según el Usuario y contraseña que tipo de Rol del coso
-        #de la apliacion va a usar y la diferencia sobre que cosas puede ver"""
+        #de la apliacion va a usar y la diferencia sobre que cosas puede ver
+
+        Gracias Isaac, eres grande
+        Un abrazo.
+        """
 
         objeto_conexion = Conexion()
         conexion = objeto_conexion.conectar()
