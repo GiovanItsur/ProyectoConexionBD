@@ -1,3 +1,4 @@
+import re
 import tkinter as tk
 import customtkinter as ctk
 
@@ -15,66 +16,72 @@ class pantallaMenu(ctk.CTkFrame):
 
         # Contenedor principal
         self.mainContainer = ctk.CTkFrame(
-            master = self, fg_color = "#f4f4f4", corner_radius = 25
+            master=self, fg_color="#f4f4f4", corner_radius=0
         )
         self.mainContainer.place(
-            relx = 0.5, rely = 0.5, anchor = "center", relwidth = 0.9, relheight = 0.9
+            relx=0.5, rely=0.5, anchor="center", relwidth=1.0, relheight=1.0
         )
 
         # Barra lateral
         self.sidebar = ctk.CTkFrame(
-            self.mainContainer, fg_color = "#2b2b2b", corner_radius = 25
+            self.mainContainer, fg_color="#2b2b2b", corner_radius=0
         )
-        self.sidebar.place(relx = 0.0, rely = 0.0, relwidth = 0.28, relheight = 1.0)
+        self.sidebar.place(relx=0.0, rely=0.0, relwidth=0.25, relheight=1.0)
 
         self.lblSidebarTitle = ctk.CTkLabel(
             self.sidebar,
-            text = f"Panel ({self.rolUsuario.upper()})",
-            font = ctk.CTkFont(family = "Roboto", size = 18, weight = "bold"),
-            text_color = "#ffffff"
+            text=f"Panel ({self.rolUsuario.upper()})",
+            font=ctk.CTkFont(family="Roboto", size=20, weight="bold"),
+            text_color="#f7d13e"
         )
-        self.lblSidebarTitle.pack(pady = (40, 30))
+        self.lblSidebarTitle.pack(pady=(35, 10))
+
+        self.separador = ctk.CTkFrame(self.sidebar, fg_color="#3d3d3d", height=2)
+        self.separador.pack(fill="x", padx=20, pady=(0, 20))
 
         self.btnVerUsuario = ctk.CTkButton(
             self.sidebar,
-            text = "👥 Ver Usuarios",
+            text = "⚙ Ver Usuarios",
             fg_color = "transparent",
             hover_color = "#3d3d3d",
             text_color = "#ffffff",
             anchor = "w",
+            corner_radius= 8,
             font = ctk.CTkFont(size = 14),
             command = self.accionVerUsuarios
         )
-        self.btnVerUsuario.pack(fill = "x", padx = 20, pady = 10)
+        self.btnVerUsuario.pack(fill = "x", padx = 20, pady = 5)
 
         if self.rolUsuario.lower() == "admin":
             self.btnRegistrarUsuario = ctk.CTkButton(
                 self.sidebar,
-                text = "➕ Registrar Usuario",
+                text = "⚙ Registrar Usuario",
                 fg_color = "transparent",
                 hover_color = "#3d3d3d",
                 text_color = "#ffffff",
                 anchor = "w",
+                corner_radius=8,
                 font = ctk.CTkFont(size = 14),
                 command = self.accionRegistrarUsuario
             )
-            self.btnRegistrarUsuario.pack(fill = "x", padx = 15, pady = 8)
+            self.btnRegistrarUsuario.pack(fill = "x", padx = 20, pady = 5)
 
             self.btnEditarUsuarios = ctk.CTkButton(
                 self.sidebar,
-                text="⚙️ Editar / Eliminar",
+                text="⚙ Editar / Eliminar",
                 fg_color="transparent",
                 hover_color="#3d3d3d",
                 text_color="#ffffff",
                 anchor="w",
+                corner_radius=8,
                 font=ctk.CTkFont(size=14),
                 command=self.accionEditarUsuarios,
             )
-            self.btnEditarUsuarios.pack(fill="x", padx=20, pady=10)
+            self.btnEditarUsuarios.pack(fill="x", padx=20, pady=5)
 
         self.btnSalir = ctk.CTkButton(
             self.sidebar,
-            text="🚪 Salir",
+            text="Salir",
             fg_color="#d9534f",
             hover_color="#c9302c",
             text_color="#ffffff",
@@ -86,9 +93,9 @@ class pantallaMenu(ctk.CTkFrame):
 
         # Contenido principal
         self.contentArea = ctk.CTkFrame(
-            self.mainContainer, fg_color = "#ffffff", corner_radius = 0
+            self.mainContainer, fg_color="#ffffff", corner_radius=0
         )
-        self.contentArea.place(relx = 0.28, rely = 0.0, relwidth = 0.72, relheight = 1.0)
+        self.contentArea.place(relx=0.25, rely=0.0, relwidth=0.75, relheight=1.0)
 
         self.mostrarBienvenida()
 
@@ -97,18 +104,161 @@ class pantallaMenu(ctk.CTkFrame):
 
         lblTitle = ctk.CTkLabel(
             self.contentArea,
-            text = "Registro de Nuevo Empleado",
-            font = ctk.CTkFont(family = "Roboto", size = 18, weight = "bold"),
-            text_color = "#1a1a1a"
+            text="Registro de Nuevo Empleado",
+            font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
+            text_color="#1a1a1a",
         )
-        lblTitle.pack(anchor = "w", padx = 25, pady = (15, 5))
+        lblTitle.pack(anchor="w", padx=25, pady=(15, 5))
 
         self.scrollReg = ctk.CTkScrollableFrame(
-            self.contentArea, fg_color = "#f9f9f9", height = 430
+            self.contentArea, fg_color="#f9f9f9", height=430
         )
-        self.scrollReg.pack(padx = 25, pady = 5, fill = "both", expand = True)
+        self.scrollReg.pack(padx=25, pady=5, fill="both", expand=True)
 
+        self.entriesReg = {}
+        camposReg = [
+            ("Usuario (Sistema)", "usuario"),
+            ("Contraseña (Sistema)", "password"),
+            ("Rol del Sistema (admin/empleado)", "rol_sistema"),
+            ("Nombre", "nombre"),
+            ("Apellido", "apellido"),
+            ("Género", "genero"),
+            ("Domicilio", "domicilio"),
+            ("Estado Civil", "estado_civil"),
+            ("Turno", "turno"),
+            ("Email", "email"),
+            ("Rol de Trabajo", "rol_trabajo"),
+            ("Nacionalidad", "nacionalidad"),
+            ("CURP", "curp"),
+            ("Departamento", "departamento"),
+            ("RFC (Cifrado AES)", "rfc"),
+            ("Teléfono (Cifrado AES)", "telefono"),
+            ("NSS (Cifrado AES)", "nss"),
+        ]
 
+        for label_text, key in camposReg:
+            frm = ctk.CTkFrame(self.scrollReg, fg_color="transparent")
+            frm.pack(fill="x", pady=4, padx=10)
+            ctk.CTkLabel(frm, text=label_text + ":", width=220, anchor="w").pack(
+                side="left", padx=5
+            )
+            ent = ctk.CTkEntry(frm, width=320, height=32)
+            if "password" in key:
+                ent.configure(show="*")
+            ent.pack(side="left", padx=5)
+            self.entriesReg[key] = ent
+
+        self.lblMsgReg = ctk.CTkLabel(
+            self.scrollReg, text="", font=ctk.CTkFont(size=12)
+        )
+        self.lblMsgReg.pack(pady=5)
+
+        btnRegistrar = ctk.CTkButton(
+            self.scrollReg,
+            text="Guardar Registro en Azure",
+            fg_color="#f7d13e",
+            hover_color="#d6b534",
+            text_color="#1a1a1a",
+            font=ctk.CTkFont(family="Roboto", size=14, weight="bold"),
+            command=self.ejecutar_registro,
+        )
+        btnRegistrar.pack(pady=15)
+
+    def ejecutar_registro(self):
+        vals = {k: e.get().strip() for k, e in self.entriesReg.items()}
+
+        if not all(vals.values()):
+            self.lblMsgReg.configure(text="Error: Todos los campos son obligatorios.", text_color="#d9534f")
+            return
+
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", vals["email"]):
+            self.lblMsgReg.configure(text="Error: Formato de correo electrónico inválido.", text_color="#d9534f")
+            return
+
+        if not re.match(r"^\d{10}$", vals["telefono"]):
+            self.lblMsgReg.configure(text="Error: El teléfono debe tener 10 dígitos.", text_color="#d9534f")
+            return
+
+        if not re.match(r"^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$", vals["curp"].upper()):
+            self.lblMsgReg.configure(text="Error: CURP inválida (Revisa longitud y formato).", text_color="#d9534f")
+            return
+
+        if not re.match(r"^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$", vals["rfc"].upper()):
+            self.lblMsgReg.configure(text="Error: RFC inválido (Debe tener 12 o 13 caracteres).", text_color="#d9534f")
+            return
+
+        if not re.match(r"^\d{11}$", vals["nss"]):
+            self.lblMsgReg.configure(text="Error: El NSS debe tener 11 dígitos numéricos.", text_color="#d9534f")
+            return
+
+        exito, mensaje = self.crud.registrar_empleado_completo(
+            usuario=vals["usuario"],
+            contrasenia=vals["password"],
+            rol_sistema=vals["rol_sistema"],
+            nombre=vals["nombre"],
+            apellido=vals["apellido"],
+            genero=vals["genero"],
+            domicilio=vals["domicilio"],
+            estado_civil=vals["estado_civil"],
+            turno=vals["turno"],
+            email=vals["email"],
+            rol_trabajo=vals["rol_trabajo"],
+            nacionalidad=vals["nacionalidad"],
+            curp=vals["curp"].upper(),
+            departamento=vals["departamento"],
+            rfc=vals["rfc"].upper(),
+            telefono=vals["telefono"],
+            nss=vals["nss"],
+        )
+
+        if exito:
+            self.lblMsgReg.configure(text=mensaje, text_color="green")
+            for e in self.entriesReg.values():
+                e.delete(0, "end")
+        else:
+            self.lblMsgReg.configure(text=mensaje, text_color="#d9534f")
+
+    def ejecutar_modificacion(self):
+        vals = {k: e.get().strip() for k, e in self.entriesMod.items()}
+        if not all(vals.values()):
+            self.lblMsgMod.configure(
+                text="Error: Todos los campos son obligatorios para actualizar.",
+                text_color="#d9534f",
+            )
+            return
+
+        if not vals["id_empleado"].isdigit() or not vals["id_usuario"].isdigit():
+            self.lblMsgMod.configure(
+                text="Error: ID de empleado y de usuario deben ser numéricos.",
+                text_color="#d9534f",
+            )
+            return
+
+        exito, mensaje = self.crud.modificar_empleado(
+            id_empleado=int(vals["id_empleado"]),
+            id_usuario=int(vals["id_usuario"]),
+            nombre=vals["nombre"],
+            apellido=vals["apellido"],
+            genero=vals["genero"],
+            domicilio=vals["domicilio"],
+            estado_civil=vals["estado_civil"],
+            turno=vals["turno"],
+            email=vals["email"],
+            rol=vals["rol"],
+            nacionalidad=vals["nacionalidad"],
+            curp=vals["curp"],
+            departamento=vals["departamento"],
+            rfc=vals["rfc"],
+            telefono=vals["telefono"],
+            nss=vals["nss"],
+        )
+
+        if exito:
+            self.lblMsgMod.configure(text=mensaje, text_color="green")
+            for e in self.entriesMod.values():
+                e.delete(0, "end")
+        else:
+            self.lblMsgMod.configure(text=mensaje, text_color="#d9534f")
 
     def limpiarAreaContenido(self):
         for widget in self.contentArea.winfo_children():
@@ -118,11 +268,14 @@ class pantallaMenu(ctk.CTkFrame):
         self.limpiarAreaContenido()
         self.lblBienvenida = ctk.CTkLabel(
             self.contentArea,
-            text = "Bienvenido al Sístema de Gestión",
-            font = ctk.CTkFont(family = "Roboto", size = 22, weight = "bold"),
-            text_color = "#1a1a1a"
+            text="Bienvenido al Sistema de Gestión",
+            font=ctk.CTkFont(family="Roboto", size=26, weight="bold"),
+            text_color="#2b2b2b"
         )
-        self.lblBienvenida.place(relx = 0.1, rely = 0.1)
+        self.lblBienvenida.place(relx=0.08, rely=0.1)
+
+        self.decorador = ctk.CTkFrame(self.contentArea, fg_color="#f7d13e", width=60, height=4)
+        self.decorador.place(relx=0.08, rely=0.16)
 
         self.lblSub = ctk.CTkLabel(
             self.contentArea,
@@ -153,7 +306,6 @@ class pantallaMenu(ctk.CTkFrame):
             gridContainer, bg="#f9f9f9", highlightthickness=0, height=350
         )
 
-        # Barras de desplazamiento personalizada con CustomTkinter
         scrollHoriz = ctk.CTkScrollbar(
             gridContainer, orientation="horizontal", command=self.canvas.xview
         )
@@ -209,15 +361,15 @@ class pantallaMenu(ctk.CTkFrame):
                 "Teléfono",
                 "NSS",
             ]
-            headerFrame = ctk.CTkFrame(self.scrollGrid, fg_color="#2b2b2b", height=35)
+            headerFrame = ctk.CTkFrame(self.scrollGrid, fg_color="#f7d13e", height=35)
             headerFrame.pack(fill="x", pady=2)
 
             for h in headers:
                 lbl = ctk.CTkLabel(
                     headerFrame,
                     text=h,
-                    font=ctk.CTkFont(size=11, weight="bold"),
-                    text_color="#ffffff",
+                    font=ctk.CTkFont(size=12, weight="bold"),
+                    text_color="#1a1a1a",
                     width=110,
                 )
                 lbl.pack(side="left", padx=2)
@@ -243,39 +395,132 @@ class pantallaMenu(ctk.CTkFrame):
             )
             lblError.pack(pady=20)
 
+    def ejecutar_eliminacion(self):
+        id_emp = self.entryDelId.get().strip()
+        if not id_emp.isdigit():
+            self.lblMsgDel.configure(
+                text="Introduce un ID de empleado válido (número).",
+                text_color="#d9534f",
+            )
+            return
+
+        exito, mensaje = self.crud.eliminar_empleado(int(id_emp))
+        if exito:
+            self.lblMsgDel.configure(text=mensaje, text_color="green")
+            self.entryDelId.delete(0, "end")
+        else:
+            self.lblMsgDel.configure(text=mensaje, text_color="#d9534f")
+
     def accionEditarUsuarios(self):
         self.limpiarAreaContenido()
 
-        lblEdit = ctk.CTkLabel(
+        lblTitle = ctk.CTkLabel(
             self.contentArea,
-            text = "Gestión y Edición de Empleados",
-            font = ctk.CTkFont(family = "Roboto", size = 20, weight = "bold"),
-            text_color = "#1a1a1a"
+            text="Gestión de Edición y Bajas de Empleados",
+            font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
+            text_color="#1a1a1a",
         )
-        lblEdit.pack(anchor = "w", padx = 25, pady = (15, 5))
+        lblTitle.pack(anchor="w", padx=25, pady=(15, 5))
 
-        self.scrollForm = ctk.CTkScrollableFrame(
-            self.contentArea, fg_color = "#f9f9f9", height = 420
+        self.scrollEdit = ctk.CTkScrollableFrame(
+            self.contentArea, fg_color="#f9f9f9", height=430
         )
-        self.scrollForm.pack(padx = 25, pady = 5, fill = "both", expand = True)
+        self.scrollEdit.pack(padx=25, pady=5, fill="both", expand=True)
 
-        # Registro de empleado
-
-        lblSecReg = ctk.CTkLabel(
-            self.scrollForm,
-            text = "➕ Registrar Nuevo Empleado",
-            font = ctk.CTkFont(size = 15, weight = "bold"),
-            text_color = "#2b2b2b"
+        lblSecMod = ctk.CTkLabel(
+            self.scrollEdit,
+            text="✏️ Modificar Empleado Existente",
+            font=ctk.CTkFont(size=15, weight="bold"),
+            text_color="#2b2b2b",
         )
-        lblSecReg.pack(anchor = "w", pady = (10, 10), padx = 10)
+        lblSecMod.pack(anchor="w", pady=(10, 10), padx=10)
+
+        self.entriesMod = {}
+        camposMod = [
+            ("ID Empleado a Modificar", "id_empleado"),
+            ("ID Usuario asociado", "id_usuario"),
+            ("Nombre", "nombre"),
+            ("Apellido", "apellido"),
+            ("Género", "genero"),
+            ("Domicilio", "domicilio"),
+            ("Estado Civil", "estado_civil"),
+            ("Turno", "turno"),
+            ("Email", "email"),
+            ("Rol de Trabajo", "rol"),
+            ("Nacionalidad", "nacionalidad"),
+            ("CURP", "curp"),
+            ("Departamento", "departamento"),
+            ("RFC (Nuevo Cifrado AES)", "rfc"),
+            ("Teléfono (Nuevo Cifrado AES)", "telefono"),
+            ("NSS (Nuevo Cifrado AES)", "nss"),
+        ]
+
+        for label_text, key in camposMod:
+            frm = ctk.CTkFrame(self.scrollEdit, fg_color="transparent")
+            frm.pack(fill="x", pady=3, padx=10)
+            ctk.CTkLabel(frm, text=label_text + ":", width=220, anchor="w").pack(
+                side="left", padx=5
+            )
+            ent = ctk.CTkEntry(frm, width=320, height=32)
+            ent.pack(side="left", padx=5)
+            self.entriesMod[key] = ent
+
+        self.lblMsgMod = ctk.CTkLabel(
+            self.scrollEdit, text="", font=ctk.CTkFont(size=12)
+        )
+        self.lblMsgMod.pack(pady=5)
+
+        btnModificar = ctk.CTkButton(
+            self.scrollEdit,
+            text="Actualizar Empleado",
+            fg_color="#f0ad4e",
+            hover_color="#ec971f",
+            text_color="#ffffff",
+            command=self.ejecutar_modificacion,
+        )
+        btnModificar.pack(pady=10)
+
+        # --- Sección Eliminar ---
+        lblSecDel = ctk.CTkLabel(
+            self.scrollEdit,
+            text="🗑️ Eliminar Empleado por ID",
+            font=ctk.CTkFont(size=15, weight="bold"),
+            text_color="#d9534f",
+        )
+        lblSecDel.pack(anchor="w", pady=(20, 10), padx=10)
+
+        frmDel = ctk.CTkFrame(self.scrollEdit, fg_color="transparent")
+        frmDel.pack(fill="x", pady=5, padx=10)
+
+        ctk.CTkLabel(frmDel, text="ID de Empleado:", width=220, anchor="w").pack(
+            side="left", padx=5
+        )
+        self.entryDelId = ctk.CTkEntry(frmDel, width=150, height=32)
+        self.entryDelId.pack(side="left", padx=5)
+
+        btnEliminar = ctk.CTkButton(
+            frmDel,
+            text="Eliminar Registro",
+            fg_color="#d9534f",
+            hover_color="#c9302c",
+            command=self.ejecutar_eliminacion,
+        )
+        btnEliminar.pack(side="left", padx=10)
+
+        self.lblMsgDel = ctk.CTkLabel(
+            self.scrollEdit, text="", font=ctk.CTkFont(size=12)
+        )
+        self.lblMsgDel.pack(pady = 18)
 
     def cerrarSesion(self):
+        self.limpiarAreaContenido()
+
         self.controlador.cambiarPantalla(pantallaLogin)
 
 
 class pantallaLogin(ctk.CTkFrame):
     def __init__(self, master, controlador):
-        super().__init__(master, fg_color = "#2b2b2b")
+        super().__init__(master, fg_color = "#ffffff")
         self.controlador = controlador
         self.crud = EmpleadosCRUD()
 
@@ -283,7 +528,7 @@ class pantallaLogin(ctk.CTkFrame):
             master = self, fg_color = "#ffffff", corner_radius = 25
         )
         self.cuadroLogin.place(
-            relx = 0.5, rely = 0.5, anchor = "center", relwidth = 0.85, relheight = 0.85
+            relx = 0.5, rely = 0.5, anchor = "center", relwidth = 1.0 , relheight = 1.0
         )
 
         # -- Sección izquierda
