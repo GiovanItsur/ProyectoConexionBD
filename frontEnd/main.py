@@ -618,7 +618,6 @@ class pantallaMenu(ctk.CTkFrame):
 
         self.controlador.cambiarPantalla(pantallaLogin)
 
-
 class pantallaLogin(ctk.CTkFrame):
     def __init__(self, master, controlador):
         super().__init__(master, fg_color = "#ffffff")
