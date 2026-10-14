@@ -69,22 +69,25 @@ class EmpleadosCRUD:
                 cursor = conexion.cursor()
 
                 sql = """
-                      SELECT id_empleado, 
-                             nombre_empleado, 
-                             apellido_empleado, 
-                             genero,
-                             domicilio,
-                             estado_civil, 
-                             turno,
-                             email, 
-                             rol_de_trabajo, 
-                             nacionalidad, 
-                             curp, 
-                             departamento,
-                             CAST(AES_DECRYPT(rfc, %s) AS CHAR)      AS rfc,
-                             CAST(AES_DECRYPT(telefono, %s) AS CHAR) AS telefono,
-                             CAST(AES_DECRYPT(nss, %s) AS CHAR)      AS nss
-                      FROM empleado 
+                      SELECT e.id_empleado,
+                             u.id_usuario,
+                             u.usuario,
+                             e.nombre_empleado,
+                             e.apellido_empleado,
+                             e.genero,
+                             e.domicilio,
+                             e.estado_civil,
+                             e.turno,
+                             e.email,
+                             e.rol_de_trabajo,
+                             e.nacionalidad,
+                             e.curp,
+                             e.departamento,
+                             CAST(AES_DECRYPT(e.rfc, %s) AS CHAR)      AS rfc,
+                             CAST(AES_DECRYPT(e.telefono, %s) AS CHAR) AS telefono,
+                             CAST(AES_DECRYPT(e.nss, %s) AS CHAR)      AS nss
+                      FROM empleado e
+                               INNER JOIN usuarios u ON e.id_usuario = u.id_usuario
                       """
 
                 cursor.execute(sql, (self.llave_aes, self.llave_aes, self.llave_aes))
