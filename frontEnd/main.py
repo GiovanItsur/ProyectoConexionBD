@@ -228,15 +228,30 @@ class pantallaMenu(ctk.CTkFrame):
             return
 
         if not vals["id_empleado"].isdigit() or not vals["id_usuario"].isdigit():
-            self.lblMsgMod.configure(
-                text="Error: ID de empleado y de usuario deben ser numéricos.",
-                text_color="#d9534f",
-            )
+            self.lblMsgMod.configure(text="Error: ID numéricos.", text_color="#d9534f")
+            return
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", vals["email"]):
+            self.lblMsgMod.configure(text="Error: Formato de correo inválido.", text_color="#d9534f")
+            return
+        if not re.match(r"^\d{10}$", vals["telefono"]):
+            self.lblMsgMod.configure(text="Error: El teléfono debe tener 10 dígitos.", text_color="#d9534f")
+            return
+        if not re.match(r"^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$", vals["curp"].upper()):
+            self.lblMsgMod.configure(text="Error: CURP inválida.", text_color="#d9534f")
+            return
+        if not re.match(r"^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$", vals["rfc"].upper()):
+            self.lblMsgMod.configure(text="Error: RFC inválido (12-13 caracteres).", text_color="#d9534f")
+            return
+        if not re.match(r"^\d{11}$", vals["nss"]):
+            self.lblMsgMod.configure(text="Error: El NSS debe tener 11 dígitos.", text_color="#d9534f")
             return
 
         exito, mensaje = self.crud.modificar_empleado(
             id_empleado=int(vals["id_empleado"]),
             id_usuario=int(vals["id_usuario"]),
+            usuario=vals["usuario"],
+            contrasenia=vals["contrasenia"],
+            rol_sistema=vals["rol_sistema"],
             nombre=vals["nombre"],
             apellido=vals["apellido"],
             genero=vals["genero"],
@@ -246,9 +261,9 @@ class pantallaMenu(ctk.CTkFrame):
             email=vals["email"],
             rol=vals["rol"],
             nacionalidad=vals["nacionalidad"],
-            curp=vals["curp"],
+            curp=vals["curp"].upper(),
             departamento=vals["departamento"],
-            rfc=vals["rfc"],
+            rfc=vals["rfc"].upper(),
             telefono=vals["telefono"],
             nss=vals["nss"],
         )
@@ -344,23 +359,19 @@ class pantallaMenu(ctk.CTkFrame):
                 lblVacio.pack(pady=20)
                 return
 
-            headers = [
-                "ID",
-                "Nombre",
-                "Apellido",
-                "Genero",
-                "Domicilio",
-                "Est. Civil",
-                "Turno",
-                "Email",
-                "Rol Trabajo",
-                "Nacionalidad",
-                "CURP",
-                "Departamento",
-                "RFC",
-                "Teléfono",
-                "NSS",
-            ]
+            if self.rolUsuario.lower() == "admin":
+                headers = [
+                    "ID Emp", "ID Usr", "Usuario", "Nombre", "Apellido", "Género",
+                    "Domicilio", "Est. Civil", "Turno", "Email", "Rol Trabajo",
+                    "Nacionalidad", "CURP", "Depto", "RFC", "Teléfono", "NSS"
+                ]
+            else:
+                headers = [
+                    "ID", "Nombre", "Apellido", "Género", "Domicilio", "Est. Civil",
+                    "Turno", "Email", "Rol Trabajo", "Nacionalidad", "CURP",
+                    "Depto", "RFC", "Teléfono", "NSS"
+                ]
+
             headerFrame = ctk.CTkFrame(self.scrollGrid, fg_color="#f7d13e", height=35)
             headerFrame.pack(fill="x", pady=2)
 
@@ -439,6 +450,9 @@ class pantallaMenu(ctk.CTkFrame):
         camposMod = [
             ("ID Empleado a Modificar", "id_empleado"),
             ("ID Usuario asociado", "id_usuario"),
+            ("Usuario (Sistema)", "usuario"),
+            ("Contraseña (Nueva)", "contrasenia"),
+            ("Rol del Sistema (admin/empleado)", "rol_sistema"),
             ("Nombre", "nombre"),
             ("Apellido", "apellido"),
             ("Género", "genero"),
