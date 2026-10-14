@@ -140,46 +140,56 @@ class EmpleadosCRUD:
         else:
             return False, "Error de conexión."
 
-    def modificar_empleado (self, id_empleado, id_usuario, nombre, apellido, genero, domicilio, estado_civil,
-                           turno, email, rol, nacionalidad, curp, departamento, rfc, telefono, nss):
+    def modificar_empleado(self, id_empleado, id_usuario, usuario, contrasenia, rol_sistema,
+                                    nombre, apellido, genero, domicilio, estado_civil,turno, email, rol, nacionalidad, curp, departamento, rfc, telefono, nss):
         objeto_conexion = Conexion()
         conexion = objeto_conexion.conectar()
 
         if conexion:
             try:
+                conexion.autocommit = False
                 cursor = conexion.cursor()
 
-                sql = """
-                      UPDATE empleado
-                      SET id_usuario        = %s, 
-                          nombre_empleado   = %s, 
-                          apellido_empleado = %s, 
-                          genero            = %s,
-                          domicilio         = %s, 
-                          estado_civil      = %s,
-                          turno             = %s,
-                          email             = %s,
-                          rol_de_trabajo    = %s,
-                          nacionalidad      = %s, 
-                          curp              = %s, 
-                          departamento      = %s,
-                          rfc               = AES_ENCRYPT(%s, %s),
-                          telefono          = AES_ENCRYPT(%s, %s),
-                          nss               = AES_ENCRYPT(%s, %s)
-                      WHERE id_empleado = %s 
-                      """
-                valores = (
-                    id_usuario, nombre, apellido, genero, domicilio, estado_civil,
+                sql_usuario = """
+                              UPDATE usuarios
+                              SET usuario     = %s, \
+                                  contrasenia = SHA2(%s, 256), \
+                                  rol_sistema = %s
+                              WHERE id_usuario = %s \
+                              """
+                cursor.execute(sql_usuario, (usuario, contrasenia, rol_sistema, id_usuario))
+
+                sql_empleado = """
+                               UPDATE empleado
+                               SET nombre_empleado   = %s,
+                                   apellido_empleado = %s,
+                                   genero            = %s,
+                                   domicilio         = %s,
+                                   estado_civil      = %s,
+                                   turno             = %s,
+                                   email             = %s,
+                                   rol_de_trabajo    = %s,
+                                   nacionalidad      = %s,
+                                   curp              = %s,
+                                   departamento      = %s,
+                                   rfc               = AES_ENCRYPT(%s, %s),
+                                   telefono          = AES_ENCRYPT(%s, %s),
+                                   nss               = AES_ENCRYPT(%s, %s)
+                               WHERE id_empleado = %s \
+                               """
+                valores_empleado = (
+                    nombre, apellido, genero, domicilio, estado_civil,
                     turno, email, rol, nacionalidad, curp, departamento,
                     rfc, self.llave_aes,
                     telefono, self.llave_aes,
                     nss, self.llave_aes,
                     id_empleado
                 )
-                cursor.execute(sql, valores)
+                cursor.execute(sql_empleado, valores_empleado)
                 conexion.commit()
-                return True, "Empleado actualizado correctamente."
+                return True, "datos actualizados correctamente."
             except Exception as e:
+                conexion.rollback()
                 return False, f"Error al actualizar empleado: {e}"
 
             finally:
@@ -191,22 +201,37 @@ class EmpleadosCRUD:
             return False, "Error de conexión."
 
     def eliminar_empleado(self, id_empleado):
-        """Elimina un registro completo buscando por su id_empleado."""
         objeto_conexion = Conexion()
         conexion = objeto_conexion.conectar()
 
         if conexion:
             try:
+                conexion.autocommit = False
                 cursor = conexion.cursor()
-                sql = "DELETE FROM empleado WHERE id_empleado = %s"
+                sql_buscar = "SELECT id_usuario FROM empleado WHERE id_empleado = %s"  #Primero para poder hacer la conexión de las dos tablas vamos a buscar la referencia del id en la otra y unirla en base a eso
+                cursor.execute(sql_buscar, (id_empleado,))
+                resultado = cursor.fetchone()
 
-                # La coma es obligatoria en Python para indicar que es una tupla de un solo elemento
-                cursor.execute(sql, (id_empleado,))
+
+                if not resultado or resultado[0] is None:
+                    return False, "No se encontró el empleado o no tiene credenciales asignadas."
+
+                id_usuario_borrar = resultado[0]
+
+                sql_emp = "DELETE FROM empleado WHERE id_empleado = %s"
+                cursor.execute(sql_emp, (id_empleado,))
+
+                sql_usu = "DELETE FROM usuarios WHERE id_usuario = %s"
+                cursor.execute(sql_usu, (id_usuario_borrar,))
+
                 conexion.commit()
+                return True, "Empleado y credenciales eliminados de forma correcta."
+                # La coma es obligatoria en Python para indicar que es una tupla de un solo elemento
 
-                return True, "Empleado eliminado correctamente."
+
             except Exception as e:
-                return False, f"Error al eliminar empleado: {e}"
+                conexion.rollback()
+                return False, f"Error al eliminar. Se canceló la operación: {e}"
             finally:
                 if conexion.is_connected():
                     cursor.close()
@@ -221,6 +246,8 @@ class EmpleadosCRUD:
 
         Gracias Isaac, eres grande
         Un abrazo.
+
+        Ya lo corregí otra vez, espero que te ayude las funciones actualizadas ya con pura trasacción
         """
 
         objeto_conexion = Conexion()
@@ -254,3 +281,4 @@ class EmpleadosCRUD:
                     conexion.close()
         else:
             return False, "Error de conexión a la base de datos.", None
+
