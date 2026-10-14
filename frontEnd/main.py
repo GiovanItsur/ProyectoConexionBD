@@ -449,7 +449,6 @@ class pantallaMenu(ctk.CTkFrame):
         self.lblMsgAccion = ctk.CTkLabel(frmAcciones, text="", font=ctk.CTkFont(size=12))
         self.lblMsgAccion.pack(side="left", padx=15)
 
-        # --- Grid Interactivo ---
         gridContainer = ctk.CTkFrame(self.contentArea, fg_color="#f9f9f9")
         gridContainer.pack(padx=25, pady=10, fill="both", expand=True)
 
@@ -490,17 +489,14 @@ class pantallaMenu(ctk.CTkFrame):
 
             valores_mostrar = [fila[0], fila[3], fila[4], fila[10]]
 
-            # Closure para capturar el ID y datos de la fila actual durante el evento clic
             def hacer_seleccion(f_id, f_data, f_frame):
                 def seleccionar(event):
                     self.id_seleccionado = f_id
                     self.datos_seleccionados = f_data
 
-                    # Restaurar todos los frames a blanco
                     for fr in self.filas_frames:
                         fr.configure(fg_color="#ffffff")
 
-                    # Resaltar la fila seleccionada con gris claro
                     f_frame.configure(fg_color="#e2e8f0")
 
                     # Habilitar los botones superiores
@@ -569,7 +565,6 @@ class pantallaMenu(ctk.CTkFrame):
             ("NSS (Nuevo Cifrado AES)", "nss"),
         ]
 
-        # Extrae la fila desencriptada y mapea los índices exactos del INNER JOIN de Isaac
         mapeo_datos = {
             "id_empleado": 0, "id_usuario": 1, "usuario": 2, "nombre": 3,
             "apellido": 4, "genero": 5, "domicilio": 6, "estado_civil": 7,
@@ -586,16 +581,15 @@ class pantallaMenu(ctk.CTkFrame):
 
             if "contrasenia" in key:
                 ent.configure(show="*")
-                ent.insert(0, "")  # SHA2 es irreversible, hay que teclear la nueva[cite: 2]
+                ent.insert(0, "")
             elif "rol_sistema" in key:
-                ent.insert(0, "empleado")  # El JOIN no trae rol_sistema, se asigna el por defecto
+                ent.insert(0, "empleado")
             elif key in mapeo_datos:
                 idx = mapeo_datos[key]
                 valor_actual = self.datos_seleccionados[idx]
                 if valor_actual is not None:
                     ent.insert(0, str(valor_actual))
 
-            # Proteger los IDs visualmente
             if key in ["id_empleado", "id_usuario"]:
                 ent.configure(state="disabled", fg_color="#e0e0e0")
 
@@ -605,7 +599,6 @@ class pantallaMenu(ctk.CTkFrame):
         self.lblMsgMod = ctk.CTkLabel(self.scrollEdit, text="", font=ctk.CTkFont(size=12))
         self.lblMsgMod.pack(pady=5)
 
-        # Botones de Acción del Formulario
         frmBotones = ctk.CTkFrame(self.scrollEdit, fg_color="transparent")
         frmBotones.pack(pady=10)
 
