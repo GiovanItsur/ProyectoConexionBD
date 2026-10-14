@@ -142,9 +142,21 @@ class pantallaMenu(ctk.CTkFrame):
             ctk.CTkLabel(frm, text=label_text + ":", width=220, anchor="w").pack(
                 side="left", padx=5
             )
-            ent = ctk.CTkEntry(frm, width=320, height=32)
-            if "password" in key:
-                ent.configure(show="*")
+
+            if key == "rol_sistema":
+                ent = ctk.CTkOptionMenu(
+                    frm, width=320, height=32,
+                    values=["empleado", "admin"],
+                    fg_color="#f4f4f4", text_color="#1a1a1a",
+                    button_color="#2b2b2b", button_hover_color="#444444",
+                    dropdown_fg_color="#ffffff", dropdown_text_color="#1a1a1a"
+                )
+                ent.set("empleado")
+            else:
+                ent = ctk.CTkEntry(frm, width=320, height=32)
+                if "password" in key:
+                    ent.configure(show="*")
+
             ent.pack(side="left", padx=5)
             self.entriesReg[key] = ent
 
@@ -213,8 +225,11 @@ class pantallaMenu(ctk.CTkFrame):
 
         if exito:
             self.lblMsgReg.configure(text=mensaje, text_color="green")
-            for e in self.entriesReg.values():
-                e.delete(0, "end")
+            for k, e in self.entriesReg.items():
+                if k == "rol_sistema":
+                    e.set("empleado")
+                else:
+                    e.delete(0, "end")
         else:
             self.lblMsgReg.configure(text=mensaje, text_color="#d9534f")
 
@@ -270,8 +285,11 @@ class pantallaMenu(ctk.CTkFrame):
 
         if exito:
             self.lblMsgMod.configure(text=mensaje, text_color="green")
-            for e in self.entriesMod.values():
-                e.delete(0, "end")
+            for k, e in self.entriesMod.items():
+                if k == "rol_sistema":
+                    e.set("empleado")
+                else:
+                    e.delete(0, "end")
         else:
             self.lblMsgMod.configure(text=mensaje, text_color="#d9534f")
 
@@ -577,21 +595,28 @@ class pantallaMenu(ctk.CTkFrame):
             frm.pack(fill="x", pady=3, padx=10)
             ctk.CTkLabel(frm, text=label_text + ":", width=220, anchor="w").pack(side="left", padx=5)
 
-            ent = ctk.CTkEntry(frm, width=320, height=32)
+            if key == "rol_sistema":
+                ent = ctk.CTkOptionMenu(
+                    frm, width=320, height=32,
+                    values=["empleado", "admin"],
+                    fg_color="#f4f4f4", text_color="#1a1a1a",
+                    button_color="#2b2b2b", button_hover_color="#444444",
+                    dropdown_fg_color="#ffffff", dropdown_text_color="#1a1a1a"
+                )
+                ent.set("empleado")
+            else:
+                ent = ctk.CTkEntry(frm, width=320, height=32)
+                if "contrasenia" in key:
+                    ent.configure(show="*")
+                    ent.insert(0, "")
+                elif key in mapeo_datos:
+                    idx = mapeo_datos[key]
+                    valor_actual = self.datos_seleccionados[idx]
+                    if valor_actual is not None:
+                        ent.insert(0, str(valor_actual))
 
-            if "contrasenia" in key:
-                ent.configure(show="*")
-                ent.insert(0, "")
-            elif "rol_sistema" in key:
-                ent.insert(0, "empleado")
-            elif key in mapeo_datos:
-                idx = mapeo_datos[key]
-                valor_actual = self.datos_seleccionados[idx]
-                if valor_actual is not None:
-                    ent.insert(0, str(valor_actual))
-
-            if key in ["id_empleado", "id_usuario"]:
-                ent.configure(state="disabled", fg_color="#e0e0e0")
+                if key in ["id_empleado", "id_usuario"]:
+                    ent.configure(state="disabled", fg_color="#e0e0e0")
 
             ent.pack(side="left", padx=5)
             self.entriesMod[key] = ent
@@ -612,6 +637,8 @@ class pantallaMenu(ctk.CTkFrame):
             text_color="#1a1a1a", font=ctk.CTkFont(weight="bold"),
             command=self.ejecutar_modificacion
         ).pack(side="left", padx=10)
+
+
 
     def cerrarSesion(self):
         self.limpiarAreaContenido()
