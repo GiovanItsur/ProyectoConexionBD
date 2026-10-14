@@ -406,24 +406,10 @@ class pantallaMenu(ctk.CTkFrame):
             )
             lblError.pack(pady=20)
 
-    def ejecutar_eliminacion(self):
-        id_emp = self.entryDelId.get().strip()
-        if not id_emp.isdigit():
-            self.lblMsgDel.configure(
-                text="Introduce un ID de empleado válido (número).",
-                text_color="#d9534f",
-            )
-            return
-
-        exito, mensaje = self.crud.eliminar_empleado(int(id_emp))
-        if exito:
-            self.lblMsgDel.configure(text=mensaje, text_color="green")
-            self.entryDelId.delete(0, "end")
-        else:
-            self.lblMsgDel.configure(text=mensaje, text_color="#d9534f")
-
     def accionEditarUsuarios(self):
         self.limpiarAreaContenido()
+        self.id_seleccionado = None
+        self.datos_seleccionados = None
 
         lblTitle = ctk.CTkLabel(
             self.contentArea,
@@ -433,18 +419,132 @@ class pantallaMenu(ctk.CTkFrame):
         )
         lblTitle.pack(anchor="w", padx=25, pady=(15, 5))
 
-        self.scrollEdit = ctk.CTkScrollableFrame(
-            self.contentArea, fg_color="#f9f9f9", height=430
-        )
-        self.scrollEdit.pack(padx=25, pady=5, fill="both", expand=True)
+        frmAcciones = ctk.CTkFrame(self.contentArea, fg_color="transparent")
+        frmAcciones.pack(fill="x", padx=25, pady=5)
 
-        lblSecMod = ctk.CTkLabel(
-            self.scrollEdit,
-            text="✏️ Modificar Empleado Existente",
-            font=ctk.CTkFont(size=15, weight="bold"),
-            text_color="#2b2b2b",
+        self.btnAbrirEdicion = ctk.CTkButton(
+            frmAcciones,
+            text="✏️ Editar Seleccionado",
+            state="disabled",
+            fg_color="#f0ad4e",
+            hover_color="#ec971f",
+            text_color="#ffffff",
+            font=ctk.CTkFont(weight="bold"),
+            command=self.mostrarFormularioEdicion
         )
-        lblSecMod.pack(anchor="w", pady=(10, 10), padx=10)
+        self.btnAbrirEdicion.pack(side="left", padx=(0, 10))
+
+        self.btnBorrarSeleccion = ctk.CTkButton(
+            frmAcciones,
+            text="🗑️ Eliminar Seleccionado",
+            state="disabled",
+            fg_color="#d9534f",
+            hover_color="#c9302c",
+            text_color="#ffffff",
+            font=ctk.CTkFont(weight="bold"),
+            command=self.ejecutar_eliminacion_seleccionada
+        )
+        self.btnBorrarSeleccion.pack(side="left")
+
+        self.lblMsgAccion = ctk.CTkLabel(frmAcciones, text="", font=ctk.CTkFont(size=12))
+        self.lblMsgAccion.pack(side="left", padx=15)
+
+        # --- Grid Interactivo ---
+        gridContainer = ctk.CTkFrame(self.contentArea, fg_color="#f9f9f9")
+        gridContainer.pack(padx=25, pady=10, fill="both", expand=True)
+
+        self.canvasEdit = tk.Canvas(gridContainer, bg="#f9f9f9", highlightthickness=0)
+        scrollVert = ctk.CTkScrollbar(gridContainer, orientation="vertical", command=self.canvasEdit.yview)
+        self.canvasEdit.configure(yscrollcommand=scrollVert.set)
+
+        scrollVert.pack(side="right", fill="y")
+        self.canvasEdit.pack(side="left", fill="both", expand=True)
+
+        self.scrollGridEdit = ctk.CTkFrame(self.canvasEdit, fg_color="#f9f9f9")
+        self.canvasEdit.create_window((0, 0), window=self.scrollGridEdit, anchor="nw")
+        self.scrollGridEdit.bind("<Configure>",
+                                 lambda e: self.canvasEdit.configure(scrollregion=self.canvasEdit.bbox("all")))
+
+        exito, datos = self.crud.mostrar_empleados_admin()
+
+        if not exito or not datos:
+            ctk.CTkLabel(self.scrollGridEdit, text="No hay registros disponibles.", text_color="gray").pack(pady=20)
+            return
+
+        headers = ["ID Emp", "Nombre", "Apellido", "Rol de Trabajo"]
+        headerFrame = ctk.CTkFrame(self.scrollGridEdit, fg_color="#f7d13e", height=35)
+        headerFrame.pack(fill="x", pady=2)
+
+        anchos = [80, 200, 200, 180]
+        for h, ancho in zip(headers, anchos):
+            ctk.CTkLabel(
+                headerFrame, text=h, font=ctk.CTkFont(size=12, weight="bold"),
+                text_color="#1a1a1a", width=ancho, anchor="w"
+            ).pack(side="left", padx=10)
+
+        self.filas_frames = []
+
+        for fila in datos:
+            rowFrame = ctk.CTkFrame(self.scrollGridEdit, fg_color="#ffffff", height=32, cursor="hand2")
+            rowFrame.pack(fill="x", pady=2)
+
+            valores_mostrar = [fila[0], fila[3], fila[4], fila[10]]
+
+            # Closure para capturar el ID y datos de la fila actual durante el evento clic
+            def hacer_seleccion(f_id, f_data, f_frame):
+                def seleccionar(event):
+                    self.id_seleccionado = f_id
+                    self.datos_seleccionados = f_data
+
+                    # Restaurar todos los frames a blanco
+                    for fr in self.filas_frames:
+                        fr.configure(fg_color="#ffffff")
+
+                    # Resaltar la fila seleccionada con gris claro
+                    f_frame.configure(fg_color="#e2e8f0")
+
+                    # Habilitar los botones superiores
+                    self.btnAbrirEdicion.configure(state="normal")
+                    self.btnBorrarSeleccion.configure(state="normal")
+                    self.lblMsgAccion.configure(text=f"Seleccionado: ID {f_id}", text_color="#1a1a1a")
+
+                return seleccionar
+
+            evento_click = hacer_seleccion(fila[0], fila, rowFrame)
+            rowFrame.bind("<Button-1>", evento_click)
+            self.filas_frames.append(rowFrame)
+
+            for valor, ancho in zip(valores_mostrar, anchos):
+                lblVal = ctk.CTkLabel(
+                    rowFrame, text=str(valor) if valor is not None else "",
+                    font=ctk.CTkFont(size=11), text_color="#333333", width=ancho, anchor="w"
+                )
+                lblVal.pack(side="left", padx=10)
+                # El clic en el texto también dispara la selección de la fila
+                lblVal.bind("<Button-1>", evento_click)
+
+    def ejecutar_eliminacion_seleccionada(self):
+        if hasattr(self, 'id_seleccionado') and self.id_seleccionado:
+            exito, mensaje = self.crud.eliminar_empleado(int(self.id_seleccionado))
+            if exito:
+                self.accionEditarUsuarios()  # Recarga la tabla limpia
+                self.lblMsgAccion.configure(text="Registro eliminado correctamente.", text_color="green")
+            else:
+                self.lblMsgAccion.configure(text=mensaje, text_color="#d9534f")
+
+    def mostrarFormularioEdicion(self):
+        self.limpiarAreaContenido()
+
+        lblTitle = ctk.CTkLabel(
+            self.contentArea,
+            text=f"✏️ Modificando Empleado ID: {self.id_seleccionado}",
+            font=ctk.CTkFont(family="Roboto", size=18, weight="bold"),
+            text_color="#1a1a1a",
+        )
+        lblTitle.pack(anchor="w", padx=25, pady=(15, 5))
+
+        self.scrollEdit = ctk.CTkScrollableFrame(self.contentArea, fg_color="#f9f9f9", height=430)
+        self.scrollEdit.pack(padx=25, pady=5, fill="both", expand=True)
 
         self.entriesMod = {}
         camposMod = [
@@ -469,62 +569,56 @@ class pantallaMenu(ctk.CTkFrame):
             ("NSS (Nuevo Cifrado AES)", "nss"),
         ]
 
+        # Extrae la fila desencriptada y mapea los índices exactos del INNER JOIN de Isaac
+        mapeo_datos = {
+            "id_empleado": 0, "id_usuario": 1, "usuario": 2, "nombre": 3,
+            "apellido": 4, "genero": 5, "domicilio": 6, "estado_civil": 7,
+            "turno": 8, "email": 9, "rol": 10, "nacionalidad": 11,
+            "curp": 12, "departamento": 13, "rfc": 14, "telefono": 15, "nss": 16
+        }
+
         for label_text, key in camposMod:
             frm = ctk.CTkFrame(self.scrollEdit, fg_color="transparent")
             frm.pack(fill="x", pady=3, padx=10)
-            ctk.CTkLabel(frm, text=label_text + ":", width=220, anchor="w").pack(
-                side="left", padx=5
-            )
+            ctk.CTkLabel(frm, text=label_text + ":", width=220, anchor="w").pack(side="left", padx=5)
+
             ent = ctk.CTkEntry(frm, width=320, height=32)
+
+            if "contrasenia" in key:
+                ent.configure(show="*")
+                ent.insert(0, "")  # SHA2 es irreversible, hay que teclear la nueva[cite: 2]
+            elif "rol_sistema" in key:
+                ent.insert(0, "empleado")  # El JOIN no trae rol_sistema, se asigna el por defecto
+            elif key in mapeo_datos:
+                idx = mapeo_datos[key]
+                valor_actual = self.datos_seleccionados[idx]
+                if valor_actual is not None:
+                    ent.insert(0, str(valor_actual))
+
+            # Proteger los IDs visualmente
+            if key in ["id_empleado", "id_usuario"]:
+                ent.configure(state="disabled", fg_color="#e0e0e0")
+
             ent.pack(side="left", padx=5)
             self.entriesMod[key] = ent
 
-        self.lblMsgMod = ctk.CTkLabel(
-            self.scrollEdit, text="", font=ctk.CTkFont(size=12)
-        )
+        self.lblMsgMod = ctk.CTkLabel(self.scrollEdit, text="", font=ctk.CTkFont(size=12))
         self.lblMsgMod.pack(pady=5)
 
-        btnModificar = ctk.CTkButton(
-            self.scrollEdit,
-            text="Actualizar Empleado",
-            fg_color="#f0ad4e",
-            hover_color="#ec971f",
-            text_color="#ffffff",
-            command=self.ejecutar_modificacion,
-        )
-        btnModificar.pack(pady=10)
+        # Botones de Acción del Formulario
+        frmBotones = ctk.CTkFrame(self.scrollEdit, fg_color="transparent")
+        frmBotones.pack(pady=10)
 
-        # --- Sección Eliminar ---
-        lblSecDel = ctk.CTkLabel(
-            self.scrollEdit,
-            text="🗑️ Eliminar Empleado por ID",
-            font=ctk.CTkFont(size=15, weight="bold"),
-            text_color="#d9534f",
-        )
-        lblSecDel.pack(anchor="w", pady=(20, 10), padx=10)
+        ctk.CTkButton(
+            frmBotones, text="Cancelar", fg_color="#d9534f", hover_color="#c9302c",
+            command=self.accionEditarUsuarios
+        ).pack(side="left", padx=10)
 
-        frmDel = ctk.CTkFrame(self.scrollEdit, fg_color="transparent")
-        frmDel.pack(fill="x", pady=5, padx=10)
-
-        ctk.CTkLabel(frmDel, text="ID de Empleado:", width=220, anchor="w").pack(
-            side="left", padx=5
-        )
-        self.entryDelId = ctk.CTkEntry(frmDel, width=150, height=32)
-        self.entryDelId.pack(side="left", padx=5)
-
-        btnEliminar = ctk.CTkButton(
-            frmDel,
-            text="Eliminar Registro",
-            fg_color="#d9534f",
-            hover_color="#c9302c",
-            command=self.ejecutar_eliminacion,
-        )
-        btnEliminar.pack(side="left", padx=10)
-
-        self.lblMsgDel = ctk.CTkLabel(
-            self.scrollEdit, text="", font=ctk.CTkFont(size=12)
-        )
-        self.lblMsgDel.pack(pady = 18)
+        ctk.CTkButton(
+            frmBotones, text="Actualizar en Azure", fg_color="#f7d13e", hover_color="#d6b534",
+            text_color="#1a1a1a", font=ctk.CTkFont(weight="bold"),
+            command=self.ejecutar_modificacion
+        ).pack(side="left", padx=10)
 
     def cerrarSesion(self):
         self.limpiarAreaContenido()
